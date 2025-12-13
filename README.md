@@ -5,3 +5,5 @@ Based on the prior work done by this excellent steam thread.
 https://steamcommunity.com/app/108600/discussions/1/3415433168012191380
 Docker images based off :
 https://github.com/EthanHand/project-zomboid-docker-arm64
+
+This is still a WIP. The server will boot up, but is generally not completely stable.
