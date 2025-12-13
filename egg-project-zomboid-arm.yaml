@@ -1,0 +1,183 @@
+_comment: 'DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY PANEL'
+meta:
+  version: PLCN_v3
+  update_url: null
+exported_at: '2025-12-13T07:54:49+00:00'
+name: 'Project Zomboid ARM'
+author: alternt
+uuid: 94a07b70-ecec-4320-a1fe-966e04a317f3
+description: |-
+  Project Zomboid is an open world survival horror video game in alpha stage development by British
+  and Canadian independent developer, The Indie Stone. The game is set in a post apocalyptic, zombie
+  infested world where the player is challenged to survive for as long as possible before inevitably
+  dying.
+image: null
+tags: {  }
+features:
+  - steam_disk_space
+docker_images:
+  alternt/zomboid-arm-runtime: alternt/zomboid-arm-runtime
+file_denylist: {  }
+startup_commands:
+  Default: 'FEXBash ./start-server.sh'
+config:
+  files: {  }
+  startup:
+    done: 'SERVER STARTED'
+  logs: {  }
+  stop: quit
+scripts:
+  installation:
+    script: |-
+      #!/bin/bash
+      # steamcmd Base Installation Script
+      #
+      # Server Files: /mnt/server
+      # Image to install with is 'ghcr.io/parkervcp/installers:debian'
+
+      ##
+      #
+      # Variables
+      # STEAM_USER, STEAM_PASS, STEAM_AUTH - Steam user setup. If a user has 2fa enabled it will most likely fail due to timeout. Leave blank for anon install.
+      # WINDOWS_INSTALL - if it's a windows server you want to install set to 1
+      # SRCDS_APPID - steam app id found here - https://developer.valvesoftware.com/wiki/Dedicated_Servers_List
+      # SRCDS_BETAID - beta branch of a steam app. Leave blank to install normal branch
+      # SRCDS_BETAPASS - password for a beta branch should one be required during private or closed testing phases.. Leave blank for no password.
+      # INSTALL_FLAGS - Any additional SteamCMD  flags to pass during install.. Keep in mind that steamcmd auto update process in the docker image might overwrite or ignore these when it performs update on server boot.
+      # AUTO_UPDATE - Adding this variable to the egg allows disabling or enabling automated updates on boot. Boolean value. 0 to disable and 1 to enable.
+      #
+
+
+      ## just in case someone removed the defaults.
+      if [[ "${STEAM_USER}" == "" ]] || [[ "${STEAM_PASS}" == "" ]]; then
+          echo -e "steam user is not set.
+      "
+          echo -e "Using anonymous user.
+      "
+          STEAM_USER=anonymous
+          STEAM_PASS=""
+          STEAM_AUTH=""
+      else
+          echo -e "user set to ${STEAM_USER}"
+      fi
+
+      ## download and install steamcmd
+      cd /tmp
+      mkdir -p /mnt/server/steamcmd
+      curl -sSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz
+      tar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd
+      mkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing
+      cd /mnt/server/steamcmd
+
+      # SteamCMD fails otherwise for some reason, even running as root.
+      # This is changed at the end of the install process anyways.
+      chown -R root:root /mnt
+
+      ## install game using steamcmd
+      ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} $( [[ "${WINDOWS_INSTALL}" == "1" ]] && printf %s '+@sSteamCmdForcePlatformType windows' ) +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s "-beta ${SRCDS_BETAID}" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s "-betapassword ${SRCDS_BETAPASS}" ) ${INSTALL_FLAGS} validate +quit
+
+      cd /mnt/server
+
+      ## install end
+      echo "-----------------------------------------"
+      echo "Installation completed..."
+      echo "-----------------------------------------"
+    container: alternt/zomboid-arm-installer
+    entrypoint: FEXBash
+variables:
+  -
+    name: 'Admin Password'
+    description: 'Password for the admin account'
+    env_variable: ADMIN_PASSWORD
+    default_value: ''
+    user_viewable: true
+    user_editable: true
+    rules:
+      - required
+      - string
+      - 'max:32'
+    sort: 3
+  -
+    name: 'Admin Username'
+    description: 'Username for the admin account'
+    env_variable: ADMIN_USER
+    default_value: admin
+    user_viewable: true
+    user_editable: true
+    rules:
+      - required
+      - string
+      - 'max:20'
+    sort: 2
+  -
+    name: 'Max Players'
+    description: 'Maximum players to allow'
+    env_variable: MAX_PLAYERS
+    default_value: 10
+    user_viewable: true
+    user_editable: false
+    rules:
+      - required
+      - string
+      - 'max:20'
+    sort: 5
+  -
+    name: 'PZ Steam App ID'
+    description: 'PZ Steam App ID'
+    env_variable: SRCDS_APPID
+    default_value: 380870
+    user_viewable: false
+    user_editable: false
+    rules:
+      - required
+      - string
+      - 'max:20'
+    sort: 6
+  -
+    name: 'Server Name'
+    description: 'The internal server name used for save/ config files.'
+    env_variable: SERVER_NAME
+    default_value: Pelican
+    user_viewable: true
+    user_editable: true
+    rules:
+      - required
+      - alpha_num
+      - 'max:64'
+    sort: 1
+  -
+    name: 'Steam Auto Update'
+    description: 'Enable or disable auto-update on startup. 0 to disable and 1 to enable.'
+    env_variable: AUTO_UPDATE
+    default_value: 0
+    user_viewable: true
+    user_editable: true
+    rules:
+      - required
+      - string
+      - 'max:20'
+    sort: 8
+  -
+    name: 'Steam Beta Branch [requires reinstall]'
+    description: 'Beta branch to install, such as b41multiplayer. Leave blank to install normal branch'
+    env_variable: SRCDS_BETAID
+    default_value: ''
+    user_viewable: true
+    user_editable: true
+    rules:
+      - nullable
+      - string
+      - 'max:64'
+    sort: 7
+  -
+    name: SteamPort
+    description: 'Sets the UDPPort option'
+    env_variable: STEAM_PORT
+    default_value: 16262
+    user_viewable: true
+    user_editable: true
+    rules:
+      - required
+      - string
+      - 'max:20'
+    sort: 4

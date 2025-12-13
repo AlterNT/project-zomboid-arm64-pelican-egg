@@ -1,14 +1,19 @@
 # Originally based off https://github.com/EthanHand/project-zomboid-docker-arm64/blob/main/Dockerfile
 # An attempt was made to slim it down somewhat.
-FROM ubuntu:24.04
+
+# --- Build FEX-Emu for OCI instance ---
+
+FROM ubuntu:24.04 AS ubuntu-fex
 ENV DEBIAN_FRONTEND=noninteractive
-# FEX Dependencies
+
+# FEX Build Dependencies
 # https://wiki.fex-emu.com/index.php/Development:Setting_up_FEX#Debian.2FUbuntu_dependencies
 # Probably not all necessary, but better safe than sorry.
 RUN apt-get update && \
     apt-get install -y \
     git \
     cmake \
+    curl \
     ninja-build \
     pkgconf \
     ccache \
@@ -35,10 +40,6 @@ RUN apt-get update && \
     qml-module-qtquick-controls \
     qml-module-qtquick-controls2 \
     qml-module-qtquick-dialogs
-# Installation tools
-RUN apt-get install -y \
-    curl \
-    wget
 
 # Build and Install FEX-Emu
 WORKDIR /root
@@ -52,5 +53,38 @@ RUN git clone --recurse-submodules https://github.com/FEX-Emu/FEX.git && \
     ninja && \
     ninja install
 
-# Install RootFS
+# --- Create installer image ---
+
+FROM ubuntu-fex AS installer
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install RootFS for root user
 RUN yes 1 | FEXRootFSFetcher
+
+# --- Create runtime image ---
+
+FROM ubuntu-fex AS runtime
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Entrypoint dependencies
+RUN apt-get update && \
+    apt-get install -y \
+    tini \
+    iproute2
+
+# Setup user and working directory
+RUN useradd -m -d /home/container -s /bin/bash container
+USER container
+ENV USER=container HOME=/home/container
+WORKDIR /home/container
+
+# Install RootFS for container user
+RUN yes 1 | FEXRootFSFetcher
+
+# Setup entrypoint script
+COPY --chown=container:container ./entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Enter pelican startup script
+ENTRYPOINT ["/usr/bin/tini", "-g", "--"]
+CMD ["/entrypoint.sh"]
