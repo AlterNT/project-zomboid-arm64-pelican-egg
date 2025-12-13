@@ -18,7 +18,10 @@ cd /home/container
 MODIFIED_STARTUP=$(echo -e ${STARTUP} | sed -e 's/{{/${/g' -e 's/}}/}/g')
 echo -e ":/home/container$ ${MODIFIED_STARTUP}"
 
-yes 1 | FEXRootFSFetcher
+# Setup RootFS if it doesn't exist.
+if ! [ -d ".fex-emu" ]; then
+    FEXRootFSFetcher -yx
+fi
 
 # Run the Server
 eval ${MODIFIED_STARTUP}

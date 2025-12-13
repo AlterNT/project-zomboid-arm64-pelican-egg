@@ -78,9 +78,6 @@ USER container
 ENV USER=container HOME=/home/container
 WORKDIR /home/container
 
-# Install RootFS for container user
-RUN yes 1 | FEXRootFSFetcher
-
 # Setup entrypoint script
 COPY --chown=container:container ./entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
